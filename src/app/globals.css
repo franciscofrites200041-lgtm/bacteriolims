@@ -1,0 +1,598 @@
+@import "tailwindcss";
+
+/* ============================================================================
+   BacterioLIMS — Design System Tokens
+   Paleta: Neutros clínicos + Azul corporativo + Acentos funcionales
+   ============================================================================ */
+
+@theme {
+  /* Clinical Neutrals */
+  --color-clinical-50: #f8f9fb;
+  --color-clinical-100: #f0f2f5;
+  --color-clinical-200: #e4e7ec;
+  --color-clinical-300: #cdd3dc;
+  --color-clinical-400: #9ba3b1;
+  --color-clinical-500: #6b7280;
+  --color-clinical-600: #4b5563;
+  --color-clinical-700: #374151;
+  --color-clinical-800: #1f2937;
+  --color-clinical-900: #111827;
+
+  /* Corporate Blue */
+  --color-corp-50: #eff6ff;
+  --color-corp-100: #dbeafe;
+  --color-corp-200: #bfdbfe;
+  --color-corp-300: #93bbfd;
+  --color-corp-400: #6096f7;
+  --color-corp-500: #3b76f0;
+  --color-corp-600: #2563eb;
+  --color-corp-700: #1d4ed8;
+  --color-corp-800: #1e40af;
+  --color-corp-900: #1e3a8a;
+
+  /* Accent: Status Colors */
+  --color-status-success: #059669;
+  --color-status-warning: #d97706;
+  --color-status-danger: #dc2626;
+  --color-status-info: #2563eb;
+
+  /* Shadows */
+  --shadow-card: 0 1px 3px 0 rgba(0, 0, 0, 0.04), 0 1px 2px -1px rgba(0, 0, 0, 0.03);
+  --shadow-card-hover: 0 4px 12px 0 rgba(0, 0, 0, 0.06), 0 2px 4px -2px rgba(0, 0, 0, 0.04);
+  --shadow-modal: 0 20px 60px -12px rgba(0, 0, 0, 0.15), 0 8px 24px -8px rgba(0, 0, 0, 0.08);
+  --shadow-sidebar: 1px 0 4px 0 rgba(0, 0, 0, 0.04);
+
+  /* Font family */
+  --font-sans: 'Inter', 'SF Pro Display', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --font-mono: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+}
+
+/* ============================================================================
+   Base Styles
+   ============================================================================ */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-clinical-300) transparent;
+}
+
+*::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+*::-webkit-scrollbar-thumb {
+  background-color: var(--color-clinical-300);
+  border-radius: 3px;
+}
+
+*::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+html {
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  font-family: var(--font-sans);
+  background-color: var(--color-clinical-50);
+  color: var(--color-clinical-800);
+  line-height: 1.6;
+}
+
+/* ============================================================================
+   Component Patterns
+   ============================================================================ */
+
+/* Clinical Card */
+.card-clinical {
+  background: white;
+  border: 1px solid var(--color-clinical-200);
+  border-radius: 12px;
+  box-shadow: var(--shadow-card);
+  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+}
+
+.card-clinical:hover {
+  box-shadow: var(--shadow-card-hover);
+  border-color: var(--color-clinical-300);
+}
+
+/* Stat Card */
+.stat-card {
+  background: white;
+  border: 1px solid var(--color-clinical-200);
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: var(--shadow-card);
+  transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+  box-shadow: var(--shadow-card-hover);
+  transform: translateY(-1px);
+}
+
+/* Sidebar */
+.sidebar-nav-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.625rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  color: var(--color-clinical-600);
+  transition: all 0.15s ease;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.sidebar-nav-item:hover {
+  background-color: var(--color-clinical-100);
+  color: var(--color-clinical-800);
+}
+
+.sidebar-nav-item.active {
+  background-color: var(--color-corp-50);
+  color: var(--color-corp-700);
+  font-weight: 600;
+}
+
+.sidebar-nav-item.active svg {
+  color: var(--color-corp-600);
+}
+
+/* Stepper */
+.stepper-step {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: var(--color-clinical-400);
+  transition: all 0.2s ease;
+  white-space: nowrap;
+}
+
+.stepper-step.active {
+  background-color: var(--color-corp-50);
+  color: var(--color-corp-700);
+  font-weight: 600;
+}
+
+.stepper-step.completed {
+  color: var(--color-status-success);
+}
+
+.stepper-step .step-number {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border-radius: 50%;
+  border: 2px solid var(--color-clinical-300);
+  font-size: 0.75rem;
+  font-weight: 700;
+  transition: all 0.2s ease;
+}
+
+.stepper-step.active .step-number {
+  border-color: var(--color-corp-600);
+  background-color: var(--color-corp-600);
+  color: white;
+}
+
+.stepper-step.completed .step-number {
+  border-color: var(--color-status-success);
+  background-color: var(--color-status-success);
+  color: white;
+}
+
+/* Status Badge */
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.375rem;
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+  border: 1px solid;
+}
+
+/* Table */
+.data-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+}
+
+.data-table thead th {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: var(--color-clinical-500);
+  background-color: var(--color-clinical-50);
+  border-bottom: 1px solid var(--color-clinical-200);
+}
+
+.data-table tbody td {
+  padding: 0.875rem 1rem;
+  font-size: 0.875rem;
+  color: var(--color-clinical-700);
+  border-bottom: 1px solid var(--color-clinical-100);
+}
+
+.data-table tbody tr {
+  transition: background-color 0.1s ease;
+}
+
+.data-table tbody tr:hover {
+  background-color: var(--color-clinical-50);
+}
+
+/* Form Controls */
+.form-label {
+  display: block;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  color: var(--color-clinical-700);
+  margin-bottom: 0.375rem;
+  letter-spacing: 0.01em;
+}
+
+.form-input {
+  width: 100%;
+  padding: 0.5625rem 0.875rem;
+  border: 1px solid var(--color-clinical-300);
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: var(--color-clinical-800);
+  background-color: white;
+  transition: all 0.15s ease;
+  outline: none;
+}
+
+.form-input:focus {
+  border-color: var(--color-corp-500);
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+}
+
+.form-input::placeholder {
+  color: var(--color-clinical-400);
+}
+
+.form-select {
+  appearance: none;
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%236b7280' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='m6 9 6 6 6-6'/%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 0.75rem center;
+  background-size: 1rem;
+  padding-right: 2.5rem;
+}
+
+/* Drag & Drop Zone */
+.dropzone {
+  border: 2px dashed var(--color-clinical-300);
+  border-radius: 12px;
+  padding: 2rem;
+  text-align: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background-color: var(--color-clinical-50);
+}
+
+.dropzone:hover,
+.dropzone.active {
+  border-color: var(--color-corp-500);
+  background-color: var(--color-corp-50);
+}
+
+.dropzone.accepted {
+  border-color: var(--color-status-success);
+  background-color: #f0fdf4;
+}
+
+/* Button System */
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.5625rem 1.25rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.15s ease;
+  border: 1px solid transparent;
+  outline: none;
+  text-decoration: none;
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background-color: var(--color-corp-600);
+  color: white;
+}
+
+.btn-primary:hover:not(:disabled) {
+  background-color: var(--color-corp-700);
+}
+
+.btn-secondary {
+  background-color: white;
+  color: var(--color-clinical-700);
+  border-color: var(--color-clinical-300);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background-color: var(--color-clinical-50);
+  border-color: var(--color-clinical-400);
+}
+
+.btn-success {
+  background-color: var(--color-status-success);
+  color: white;
+}
+
+.btn-success:hover:not(:disabled) {
+  background-color: #047857;
+}
+
+.btn-danger {
+  background-color: var(--color-status-danger);
+  color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+  background-color: #b91c1c;
+}
+
+.btn-ghost {
+  background-color: transparent;
+  color: var(--color-clinical-600);
+}
+
+.btn-ghost:hover:not(:disabled) {
+  background-color: var(--color-clinical-100);
+}
+
+.btn-sm {
+  padding: 0.375rem 0.875rem;
+  font-size: 0.8125rem;
+}
+
+.btn-lg {
+  padding: 0.75rem 1.75rem;
+  font-size: 1rem;
+}
+
+/* Antibiogram Matrix Table */
+.atbg-matrix {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  font-size: 0.8125rem;
+}
+
+.atbg-matrix thead th {
+  padding: 0.625rem 0.5rem;
+  font-size: 0.6875rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--color-clinical-500);
+  background-color: var(--color-clinical-50);
+  border-bottom: 2px solid var(--color-clinical-200);
+  text-align: center;
+  white-space: nowrap;
+}
+
+.atbg-matrix tbody td {
+  padding: 0.375rem 0.5rem;
+  border-bottom: 1px solid var(--color-clinical-100);
+  text-align: center;
+  vertical-align: middle;
+}
+
+.atbg-matrix tbody td:first-child {
+  text-align: left;
+  font-weight: 500;
+  color: var(--color-clinical-800);
+}
+
+.atbg-matrix tbody tr:hover {
+  background-color: var(--color-clinical-50);
+}
+
+.atbg-matrix .interp-S {
+  background-color: #ecfdf5;
+  color: #065f46;
+  font-weight: 700;
+}
+
+.atbg-matrix .interp-R {
+  background-color: #fef2f2;
+  color: #991b1b;
+  font-weight: 700;
+}
+
+.atbg-matrix .interp-I {
+  background-color: #fffbeb;
+  color: #92400e;
+  font-weight: 700;
+}
+
+.atbg-matrix .interp-SDD {
+  background-color: #eff6ff;
+  color: #1e40af;
+  font-weight: 700;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(4px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes slideDown {
+  from {
+    opacity: 0;
+    max-height: 0;
+  }
+
+  to {
+    opacity: 1;
+    max-height: 500px;
+  }
+}
+
+@keyframes pulse-gentle {
+
+  0%,
+  100% {
+    opacity: 1;
+  }
+
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.animate-fadeIn {
+  animation: fadeIn 0.3s ease-out forwards;
+}
+
+.animate-slideDown {
+  animation: slideDown 0.3s ease-out forwards;
+  overflow: hidden;
+}
+
+.animate-pulse-gentle {
+  animation: pulse-gentle 2s ease-in-out infinite;
+}
+
+/* ============================================================================
+   Mobile Optimizations
+   ============================================================================ */
+
+/* Touch targets: mínimo 44px */
+@media (pointer: coarse) {
+
+  .btn,
+  .sidebar-nav-item,
+  .form-input,
+  .form-select {
+    min-height: 44px;
+  }
+
+  .btn-sm {
+    min-height: 38px;
+  }
+
+  .stepper-step {
+    min-height: 44px;
+    padding: 0.5rem 0.625rem;
+  }
+}
+
+/* Mobile layout adjustments */
+@media (max-width: 640px) {
+  .stat-card {
+    padding: 1rem;
+  }
+
+  .stat-card p:first-of-type {
+    font-size: 1.125rem;
+  }
+
+  .data-table thead th {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.625rem;
+  }
+
+  .data-table tbody td {
+    padding: 0.625rem 0.75rem;
+    font-size: 0.8125rem;
+  }
+
+  .card-clinical {
+    border-radius: 10px;
+  }
+
+  .dropzone {
+    padding: 1.25rem;
+  }
+}
+
+/* Scroll hint for horizontal tables */
+.scroll-hint {
+  position: relative;
+}
+
+.scroll-hint::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  width: 24px;
+  background: linear-gradient(to right, transparent, white);
+  pointer-events: none;
+  opacity: 1;
+  transition: opacity 0.2s ease;
+}
+
+@media (min-width: 1024px) {
+  .scroll-hint::after {
+    display: none;
+  }
+}
+
+/* Safe area for notch devices */
+@supports (padding: env(safe-area-inset-bottom)) {
+  .sidebar-nav-item:last-child {
+    margin-bottom: env(safe-area-inset-bottom);
+  }
+}
+
+/* Print Styles */
+@media print {
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white;
+    font-size: 10pt;
+  }
+
+  .card-clinical {
+    box-shadow: none;
+    border: 1px solid #ddd;
+    break-inside: avoid;
+  }
+}

@@ -1,0 +1,489 @@
+// =============================================================================
+// BacterioLIMS — Prisma Schema
+// Sistema de Gestión de Laboratorio de Alta Complejidad
+// Esquema relacional PostgreSQL para bacteriología tercerizada
+// =============================================================================
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// =============================================================================
+// MÓDULO DE AUTENTICACIÓN Y RBAC
+// =============================================================================
+
+enum UserRole {
+  ADMIN       // Bacteriólogo experto (dueño del sistema)
+  LAB_CLIENT  // Laboratorio clínico derivador
+}
+
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  passwordHash  String    @map("password_hash")
+  role          UserRole
+  isActive      Boolean   @default(true) @map("is_active")
+  lastLoginAt   DateTime? @map("last_login_at")
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  // Relaciones
+  adminProfile  AdminProfile?
+  labProfile    LabClientProfile?
+  auditLogs     AuditLog[]
+
+  @@map("users")
+}
+
+model AdminProfile {
+  id              String  @id @default(cuid())
+  userId          String  @unique @map("user_id")
+  fullName        String  @map("full_name")
+  matricula       String  // Matrícula profesional del bacteriólogo
+  mpAlias         String  @map("mp_alias")  // Alias Mercado Pago
+  mpCvu           String  @map("mp_cvu")    // CVU Mercado Pago
+  phone           String?
+  signatureUrl    String? @map("signature_url") // Firma digitalizada
+
+  user            User    @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("admin_profiles")
+}
+
+model LabClientProfile {
+  id              String   @id @default(cuid())
+  userId          String   @unique @map("user_id")
+  labName         String   @map("lab_name")
+  cuit            String   @unique
+  address         String?
+  city            String?
+  province        String?
+  phone           String?
+  contactName     String?  @map("contact_name")
+  contactEmail    String?  @map("contact_email")
+  isActive        Boolean  @default(true) @map("is_active")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relaciones
+  samples         Sample[]
+  invoices        Invoice[]
+  payments        Payment[]
+  priceOverrides  LabPriceOverride[]
+
+  @@map("lab_client_profiles")
+}
+
+// =============================================================================
+// MÓDULO DE NOMENCLADOR NBU DINÁMICO
+// =============================================================================
+
+model NbuCode {
+  id              String   @id @default(cuid())
+  code            String   @unique         // Ej: "660104"
+  description     String                   // Ej: "Examen directo y coloración de Gram"
+  category        String                   // Ej: "Bacteriología"
+  subcategory     String?                  // Ej: "Examen Directo"
+  basePrice       Decimal  @map("base_price") @db.Decimal(12, 2) // Precio base en ARS
+  isActive        Boolean  @default(true)  @map("is_active")
+  effectiveFrom   DateTime @map("effective_from")
+  effectiveTo     DateTime? @map("effective_to")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  // Relaciones
+  invoiceItems    InvoiceItem[]
+  sampleNbuCodes  SampleNbuCode[]
+  priceOverrides  LabPriceOverride[]
+
+  @@index([code, isActive])
+  @@map("nbu_codes")
+}
+
+// Sobreprecios personalizados por laboratorio
+model LabPriceOverride {
+  id              String   @id @default(cuid())
+  labProfileId    String   @map("lab_profile_id")
+  nbuCodeId       String   @map("nbu_code_id")
+  customPrice     Decimal  @map("custom_price") @db.Decimal(12, 2)
+  effectiveFrom   DateTime @map("effective_from")
+  effectiveTo     DateTime? @map("effective_to")
+
+  labProfile      LabClientProfile @relation(fields: [labProfileId], references: [id], onDelete: Cascade)
+  nbuCode         NbuCode          @relation(fields: [nbuCodeId], references: [id], onDelete: Cascade)
+
+  @@unique([labProfileId, nbuCodeId, effectiveFrom])
+  @@map("lab_price_overrides")
+}
+
+// =============================================================================
+// MÓDULO CORE — MUESTRAS BACTERIOLÓGICAS
+// =============================================================================
+
+enum SampleStatus {
+  PENDING_RECEPTION   // Pendiente de Recepción
+  IN_PROCESS          // En Proceso Analítico
+  REPORT_FINALIZED    // Informe Finalizado
+  DELIVERED           // Entregado/Descargado
+}
+
+enum SampleType {
+  ORINA
+  SANGRE_HEMOCULTIVO
+  ESPUTO
+  SECRECION_HERIDA
+  LCR
+  HISOPADO_FARINGEO
+  HISOPADO_NASAL
+  HISOPADO_VAGINAL
+  HISOPADO_RECTAL
+  MATERIA_FECAL
+  LIQUIDO_PLEURAL
+  LIQUIDO_ASCITICO
+  CATETER
+  OTRO
+}
+
+model Sample {
+  id                String       @id @default(cuid())
+  labProfileId      String       @map("lab_profile_id")
+  sampleCode        String       @unique @map("sample_code") // Código autogenerado
+  status            SampleStatus @default(PENDING_RECEPTION)
+  receivedAt        DateTime?    @map("received_at")
+  completedAt       DateTime?    @map("completed_at")
+  createdAt         DateTime     @default(now()) @map("created_at")
+  updatedAt         DateTime     @updatedAt @map("updated_at")
+
+  // Paso 1: Preanalítica
+  patientInitials   String?      @map("patient_initials") // Solo iniciales por confidencialidad
+  patientAge        Int?         @map("patient_age")
+  patientGender     String?      @map("patient_gender")
+  clinicalDiagnosis String?      @map("clinical_diagnosis")
+  sampleType        SampleType?  @map("sample_type")
+  sampleTypeOther   String?      @map("sample_type_other")
+  collectionDate    DateTime?    @map("collection_date")
+  requestingDoctor  String?      @map("requesting_doctor")
+
+  // Relaciones
+  labProfile        LabClientProfile @relation(fields: [labProfileId], references: [id])
+  directExam        DirectExam?
+  culture           Culture?
+  antibiogram       Antibiogram?
+  resistanceMechs   ResistanceMechanism?
+  sampleNbuCodes    SampleNbuCode[]
+  report            Report?
+
+  @@index([labProfileId, status])
+  @@index([sampleCode])
+  @@index([createdAt])
+  @@map("samples")
+}
+
+// Paso 2: Examen Directo
+model DirectExam {
+  id                    String   @id @default(cuid())
+  sampleId              String   @unique @map("sample_id")
+
+  // Citología
+  leukocytes            String?  // Ej: "0-5/campo", "5-10/campo", ">50/campo"
+  redBloodCells         String?  @map("red_blood_cells")
+  epithelialCells       String?  @map("epithelial_cells")
+  inflammatoryReaction  String?  @map("inflammatory_reaction") // Leve, Moderada, Severa
+
+  // Tinción de Gram
+  gramPerformed         Boolean  @default(false) @map("gram_performed")
+  gramResult            String?  @map("gram_result") // Descriptivo
+  gramCocci             String?  @map("gram_cocci")  // Gram+ o Gram-
+  gramBacilli           String?  @map("gram_bacilli")
+  gramYeasts            Boolean  @default(false) @map("gram_yeasts")
+  gramClue              Boolean  @default(false) @map("gram_clue") // Clue cells
+
+  // Ziehl-Neelsen (BAAR)
+  zhiehlPerformed       Boolean  @default(false) @map("zhiehl_performed")
+  zhiehlResult          String?  @map("zhiehl_result") // Negativo, +, ++, +++
+
+  // Fresco
+  freshExamPerformed    Boolean  @default(false) @map("fresh_exam_performed")
+  freshExamResult       String?  @map("fresh_exam_result")
+  trichomonas           Boolean  @default(false)
+  mobileBacteria        Boolean  @default(false) @map("mobile_bacteria")
+
+  notes                 String?
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  sample                Sample   @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+
+  @@map("direct_exams")
+}
+
+// Paso 3: Cultivo e Identificación
+model Culture {
+  id                    String   @id @default(cuid())
+  sampleId              String   @unique @map("sample_id")
+
+  // Resultado general
+  cultureResult         String?  @map("culture_result") // Positivo, Negativo, Flora habitual
+  incubationHours       Int?     @map("incubation_hours")
+
+  // Recuento cuantitativo (Kass para orina)
+  ufcCount              String?  @map("ufc_count") // Ej: ">100.000 UFC/ml", "<10.000 UFC/ml"
+  kassCriteria          String?  @map("kass_criteria") // Significativo, No significativo, Dudoso
+
+  // Identificación microbiológica
+  organism1Name         String?  @map("organism1_name")
+  organism1Morphology   String?  @map("organism1_morphology")
+  organism2Name         String?  @map("organism2_name")
+  organism2Morphology   String?  @map("organism2_morphology")
+  organism3Name         String?  @map("organism3_name")
+  organism3Morphology   String?  @map("organism3_morphology")
+
+  // Pruebas bioquímicas (colapsable)
+  biochemTestsPerformed Boolean  @default(false) @map("biochem_tests_performed")
+  catalase              String?
+  oxidase               String?
+  coagulase             String?
+  indol                 String?
+  citrate               String?
+  urease                String?
+  tsi                   String?
+  motility              String?
+  lysineDecarboxylase   String?  @map("lysine_decarboxylase")
+  bile                  String?
+  optoquina             String?
+  bacitracina           String?
+  novobiocina           String?
+  otherBiochemTests     String?  @map("other_biochem_tests") // JSON string
+
+  notes                 String?
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  sample                Sample   @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+
+  @@map("cultures")
+}
+
+// Paso 4: Antibiograma
+model Antibiogram {
+  id                    String   @id @default(cuid())
+  sampleId              String   @unique @map("sample_id")
+  method                String?  // "Kirby-Bauer", "CIM", "Automatizado"
+  clsiVersion           String?  @map("clsi_version") // Ej: "M100-Ed34"
+  organismTested        String?  @map("organism_tested")
+  notes                 String?
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  sample                Sample   @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  entries               AntibiogramEntry[]
+
+  @@map("antibiograms")
+}
+
+enum ClinicalInterpretation {
+  S   // Sensible
+  R   // Resistente
+  I   // Intermedio
+  SDD // Sensible Dosis-Dependiente
+}
+
+model AntibiogramEntry {
+  id                    String                 @id @default(cuid())
+  antibiogramId         String                 @map("antibiogram_id")
+  antibioticName        String                 @map("antibiotic_name")
+  antibioticGroup       String?                @map("antibiotic_group") // Ej: "Betalactámicos", "Quinolonas"
+  diskContent           String?                @map("disk_content") // Ej: "30 µg"
+  haloDiameter          Decimal?               @map("halo_diameter") @db.Decimal(5, 1) // mm
+  mic                   Decimal?               @db.Decimal(8, 3) // µg/ml
+  interpretation        ClinicalInterpretation
+  notes                 String?
+  createdAt             DateTime               @default(now()) @map("created_at")
+
+  antibiogram           Antibiogram            @relation(fields: [antibiogramId], references: [id], onDelete: Cascade)
+
+  @@map("antibiogram_entries")
+}
+
+// Paso 5: Mecanismos de Resistencia
+model ResistanceMechanism {
+  id                    String   @id @default(cuid())
+  sampleId              String   @unique @map("sample_id")
+
+  // BLEE
+  bleeDetected          Boolean  @default(false) @map("blee_detected")
+  bleeMethod            String?  @map("blee_method") // Ej: "Doble disco", "Jarlier"
+
+  // MRSA
+  mrsaDetected          Boolean  @default(false) @map("mrsa_detected")
+  mrsaMethod            String?  @map("mrsa_method") // Ej: "Cefoxitina disco"
+
+  // Carbapenemasas
+  carbapenemaseDetected Boolean  @default(false) @map("carbapenemase_detected")
+  carbapenemaseType     String?  @map("carbapenemase_type") // "KPC", "NDM", "OXA-48", "VIM", "IMP"
+  carbapenemaseMethod   String?  @map("carbapenemase_method") // Ej: "mCIM/eCIM", "CarbaNP"
+
+  // AmpC
+  ampcDetected          Boolean  @default(false) @map("ampc_detected")
+  ampcMethod            String?  @map("ampc_method")
+
+  // VRE
+  vreDetected           Boolean  @default(false) @map("vre_detected")
+  vreType               String?  @map("vre_type") // "VanA", "VanB"
+
+  // WHONET Reporting
+  whonetReported        Boolean  @default(false) @map("whonet_reported")
+  whonetData            String?  @map("whonet_data") // JSON para exportación WHONET
+
+  notes                 String?
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  sample                Sample   @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+
+  @@map("resistance_mechanisms")
+}
+
+// Relación Muestra - Códigos NBU aplicados
+model SampleNbuCode {
+  id            String   @id @default(cuid())
+  sampleId      String   @map("sample_id")
+  nbuCodeId     String   @map("nbu_code_id")
+  quantity      Int      @default(1)
+  unitPrice     Decimal  @map("unit_price") @db.Decimal(12, 2)
+  autoApplied   Boolean  @default(true) @map("auto_applied") // Si fue auto-detectado por la lógica de facturación
+
+  sample        Sample   @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+  nbuCode       NbuCode  @relation(fields: [nbuCodeId], references: [id])
+
+  @@unique([sampleId, nbuCodeId])
+  @@map("sample_nbu_codes")
+}
+
+// =============================================================================
+// MÓDULO DE INFORMES
+// =============================================================================
+
+model Report {
+  id            String   @id @default(cuid())
+  sampleId      String   @unique @map("sample_id")
+  reportNumber  String   @unique @map("report_number") // Número correlativo del informe
+  pdfUrl        String?  @map("pdf_url")
+  signedAt      DateTime? @map("signed_at")
+  signedBy      String?  @map("signed_by")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  sample        Sample   @relation(fields: [sampleId], references: [id], onDelete: Cascade)
+
+  @@map("reports")
+}
+
+// =============================================================================
+// MÓDULO DE FACTURACIÓN Y PAGOS
+// =============================================================================
+
+enum InvoiceStatus {
+  DRAFT
+  PENDING
+  PARTIALLY_PAID
+  PAID
+  OVERDUE
+  CANCELLED
+}
+
+model Invoice {
+  id              String        @id @default(cuid())
+  labProfileId    String        @map("lab_profile_id")
+  invoiceNumber   String        @unique @map("invoice_number")
+  period          String        // "2026-02" (Año-Mes)
+  subtotal        Decimal       @db.Decimal(12, 2)
+  tax             Decimal       @default(0) @db.Decimal(12, 2)
+  total           Decimal       @db.Decimal(12, 2)
+  paidAmount      Decimal       @default(0) @map("paid_amount") @db.Decimal(12, 2)
+  balance         Decimal       @db.Decimal(12, 2) // total - paidAmount
+  status          InvoiceStatus @default(PENDING)
+  dueDate         DateTime?     @map("due_date")
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  labProfile      LabClientProfile @relation(fields: [labProfileId], references: [id])
+  items           InvoiceItem[]
+  payments        Payment[]
+
+  @@index([labProfileId, period])
+  @@map("invoices")
+}
+
+model InvoiceItem {
+  id              String   @id @default(cuid())
+  invoiceId       String   @map("invoice_id")
+  nbuCodeId       String   @map("nbu_code_id")
+  sampleCode      String   @map("sample_code")
+  description     String
+  quantity        Int      @default(1)
+  unitPrice       Decimal  @map("unit_price") @db.Decimal(12, 2)
+  totalPrice      Decimal  @map("total_price") @db.Decimal(12, 2)
+
+  invoice         Invoice  @relation(fields: [invoiceId], references: [id], onDelete: Cascade)
+  nbuCode         NbuCode  @relation(fields: [nbuCodeId], references: [id])
+
+  @@map("invoice_items")
+}
+
+enum PaymentStatus {
+  PENDING_REVIEW
+  APPROVED
+  REJECTED
+}
+
+model Payment {
+  id              String        @id @default(cuid())
+  labProfileId    String        @map("lab_profile_id")
+  invoiceId       String?       @map("invoice_id")
+  amount          Decimal       @db.Decimal(12, 2)
+  paymentDate     DateTime      @map("payment_date")
+  receiptUrl      String        @map("receipt_url") // URL del comprobante subido
+  receiptFilename String        @map("receipt_filename")
+  status          PaymentStatus @default(PENDING_REVIEW)
+  reviewedAt      DateTime?     @map("reviewed_at")
+  reviewedBy      String?       @map("reviewed_by")
+  rejectionReason String?       @map("rejection_reason")
+  notes           String?
+  createdAt       DateTime      @default(now()) @map("created_at")
+  updatedAt       DateTime      @updatedAt @map("updated_at")
+
+  labProfile      LabClientProfile @relation(fields: [labProfileId], references: [id])
+  invoice         Invoice?         @relation(fields: [invoiceId], references: [id])
+
+  @@index([labProfileId, status])
+  @@map("payments")
+}
+
+// =============================================================================
+// MÓDULO DE AUDITORÍA
+// =============================================================================
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  userId      String   @map("user_id")
+  action      String   // "SAMPLE_CREATED", "REPORT_SIGNED", "PAYMENT_APPROVED"
+  entityType  String   @map("entity_type") // "Sample", "Payment", etc.
+  entityId    String   @map("entity_id")
+  metadata    String?  // JSON adicional
+  ipAddress   String?  @map("ip_address")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  user        User     @relation(fields: [userId], references: [id])
+
+  @@index([userId, createdAt])
+  @@index([entityType, entityId])
+  @@map("audit_logs")
+}
