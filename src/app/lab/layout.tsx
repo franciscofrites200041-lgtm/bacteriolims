@@ -3,21 +3,25 @@
 import Sidebar from "@/components/layout/Sidebar";
 import { useAuthStore } from "@/lib/store";
 import { useEffect } from "react";
-import { mockLabUser } from "@/lib/mock-data";
 
 export default function LabLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const { isAuthenticated } = useAuthStore();
+    const { checkSession, isLoading } = useAuthStore();
 
-    // Auto-login as lab client for demo purposes
     useEffect(() => {
-        if (!isAuthenticated) {
-            useAuthStore.setState({ user: mockLabUser, isAuthenticated: true });
-        }
-    }, [isAuthenticated]);
+        checkSession();
+    }, [checkSession]);
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-clinical-50 flex items-center justify-center">
+                <div className="w-8 h-8 border-3 border-corp-200 border-t-corp-600 rounded-full animate-spin" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-clinical-50">

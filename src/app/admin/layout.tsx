@@ -3,21 +3,25 @@
 import Sidebar from "@/components/layout/Sidebar";
 import { useAuthStore } from "@/lib/store";
 import { useEffect } from "react";
-import { mockAdminUser } from "@/lib/mock-data";
 
 export default function AdminLayout({
     children,
 }: {
     children: React.ReactNode;
 }) {
-    const { user, isAuthenticated } = useAuthStore();
+    const { checkSession, isAuthenticated, isLoading } = useAuthStore();
 
-    // Auto-login as admin for demo purposes
     useEffect(() => {
-        if (!isAuthenticated) {
-            useAuthStore.setState({ user: mockAdminUser, isAuthenticated: true });
-        }
-    }, [isAuthenticated]);
+        checkSession();
+    }, [checkSession]);
+
+    if (isLoading) {
+        return (
+            <div className="min-h-screen bg-clinical-50 flex items-center justify-center">
+                <div className="w-8 h-8 border-3 border-corp-200 border-t-corp-600 rounded-full animate-spin" />
+            </div>
+        );
+    }
 
     return (
         <div className="min-h-screen bg-clinical-50">

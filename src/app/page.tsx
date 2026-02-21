@@ -37,20 +37,27 @@ export default function LoginPage() {
 
     try {
       const success = await login(email, password);
-      if (!success) {
+      if (success) {
+        // Determine redirect based on email
+        const isAdmin = email.includes("admin");
+        window.location.href = isAdmin ? "/admin" : "/lab";
+      } else {
         setError("Credenciales inválidas. Verifique su email y contraseña.");
+        setIsLoading(false);
       }
     } catch {
       setError("Error de conexión. Intente nuevamente.");
-    } finally {
       setIsLoading(false);
     }
   };
 
   const quickLogin = async (role: "ADMIN" | "LAB_CLIENT") => {
     setIsLoading(true);
-    const email = role === "ADMIN" ? "dra.martinez@bacteriolims.com" : "contacto@labcentral.com.ar";
-    await login(email, "demo");
+    const demoEmail = role === "ADMIN" ? "admin@bacteriolims.com" : "lab@labcentral.com";
+    const success = await login(demoEmail, role === "ADMIN" ? "admin123" : "lab123");
+    if (success) {
+      window.location.href = role === "ADMIN" ? "/admin" : "/lab";
+    }
     setIsLoading(false);
   };
 
