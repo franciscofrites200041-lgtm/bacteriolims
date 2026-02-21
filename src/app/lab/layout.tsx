@@ -23,7 +23,7 @@ export default function LabLayout({
         <div className="min-h-screen bg-clinical-50">
             <Sidebar role="LAB_CLIENT" />
             <main className="lg:ml-[260px] min-h-screen">
-                <div className="p-4 sm:p-6 lg:p-8">{children}</div>
+                <div className="pt-16 lg:pt-0 p-4 sm:p-6 lg:p-8">{children}</div>
             </main>
         </div>
     );

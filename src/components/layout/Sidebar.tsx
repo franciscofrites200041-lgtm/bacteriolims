@@ -107,14 +107,24 @@ export default function Sidebar({ role }: SidebarProps) {
 
     return (
         <>
-            {/* Mobile toggle */}
-            <button
-                onClick={() => setIsMobileOpen(true)}
-                className="lg:hidden fixed top-4 left-4 z-50 w-10 h-10 bg-white rounded-xl shadow-md flex items-center justify-center border border-clinical-200 hover:bg-clinical-50 transition-colors"
-                aria-label="Abrir menú"
-            >
-                <Menu className="w-5 h-5 text-clinical-600" />
-            </button>
+            {/* Mobile top bar */}
+            <div className="lg:hidden fixed top-0 left-0 right-0 z-30 h-14 bg-white border-b border-clinical-200 flex items-center justify-between px-4"
+                style={{ boxShadow: "0 1px 3px rgba(0,0,0,0.05)" }}>
+                <button
+                    onClick={() => setIsMobileOpen(true)}
+                    className="w-9 h-9 rounded-lg flex items-center justify-center hover:bg-clinical-100 transition-colors"
+                    aria-label="Abrir menú"
+                >
+                    <Menu className="w-5 h-5 text-clinical-600" />
+                </button>
+                <Link href={role === "ADMIN" ? "/admin" : "/lab"} className="flex items-center gap-2">
+                    <div className="w-7 h-7 bg-gradient-to-br from-[#1e3a5f] to-[#2563eb] rounded-md flex items-center justify-center">
+                        <Microscope className="w-3.5 h-3.5 text-white" />
+                    </div>
+                    <span className="text-clinical-800 font-bold text-sm tracking-tight">BacterioLIMS</span>
+                </Link>
+                <div className="w-9" /> {/* Spacer for centering */}
+            </div>
 
             {/* Mobile overlay */}
             {isMobileOpen && (
